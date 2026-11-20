@@ -1,15 +1,18 @@
-"""Step 1: LLM ke bina LangGraph. Focus: State, Nodes, Edges, Conditional edges."""
+"""LangGraph wiring. Step 1: nodes/edges. Step 2: LLM rank. Step 3: ReAct loop with tools."""
 import operator
 from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import tools_condition
 
 from data import repair_orders
 from ranking import make_rank_options
+from resequence import (make_finalize_plan, make_resequence_agent, make_run_tools,
+                        prepare_resequence)
 from tools import check_local_inventory, check_sister_stores, check_vendor_stock
 
 
-# 1) STATE: graph ki shared memory. Har node isme se padhta hai aur isme likhta hai.
 class StallState(TypedDict):
     ro_id: str
     part_no: str
@@ -20,11 +23,12 @@ class StallState(TypedDict):
     promise_by_hours: float
     ranked_options: list[dict]
     summary: str
-    # Annotated + operator.add = "reducer": nodes ki list append hoti hai, overwrite nahi.
+    # Step 3
+    messages: Annotated[list, add_messages]   # LLM <-> tools ki baatcheet; add_messages = special reducer
+    plan: dict
     log: Annotated[list[str], operator.add]
 
 
-# 2) NODES: har node state leta hai aur state ka *sirf badla hua hissa* return karta hai.
 def detect_stall(state: StallState) -> dict:
     ro = repair_orders[state["ro_id"]]
     stalled = ro["status"] == "Waiting on Part"
@@ -36,23 +40,19 @@ def detect_stall(state: StallState) -> dict:
 
 def check_local(state: StallState) -> dict:
     qty = check_local_inventory(state["part_no"])
-    msg = f"Local stock: {qty} -> " + ("mil gaya" if qty > 0 else "nahi hai")
-    return {"local_qty": qty, "log": [msg]}
+    return {"local_qty": qty, "log": [f"Local stock: {qty} -> " + ("mil gaya" if qty > 0 else "nahi hai")]}
 
 
 def check_sister(state: StallState) -> dict:
     options = check_sister_stores(state["part_no"])
-    msg = f"Sister stores: {len(options)} option(s) mile"
-    return {"sister_options": options, "log": [msg]}
+    return {"sister_options": options, "log": [f"Sister stores: {len(options)} option(s) mile"]}
 
 
 def check_vendor(state: StallState) -> dict:
     options = check_vendor_stock(state["part_no"])
-    msg = f"Vendors: {len(options)} option(s) mile"
-    return {"vendor_options": options, "log": [msg]}
+    return {"vendor_options": options, "log": [f"Vendors: {len(options)} option(s) mile"]}
 
 
-# 3) CONDITIONAL EDGES: function ek string return karta hai, jo batati hai agla node kaunsa.
 def route_after_detect(state: StallState) -> str:
     return "check_local" if state["is_stalled"] else END
 
@@ -61,7 +61,10 @@ def route_after_local(state: StallState) -> str:
     return END if state["local_qty"] > 0 else "check_sister"
 
 
-# 4) GRAPH BUILD
+def route_after_rank(state: StallState) -> str:
+    return "prepare_resequence" if state.get("ranked_options") else END
+
+
 def build_graph(llm):
     g = StateGraph(StallState)
 
@@ -70,12 +73,22 @@ def build_graph(llm):
     g.add_node("check_sister", check_sister)
     g.add_node("check_vendor", check_vendor)
     g.add_node("rank_options", make_rank_options(llm))
+    g.add_node("prepare_resequence", prepare_resequence)
+    g.add_node("resequence_agent", make_resequence_agent(llm))
+    g.add_node("tools", make_run_tools())
+    g.add_node("finalize_plan", make_finalize_plan(llm))
 
     g.add_edge(START, "detect_stall")
     g.add_conditional_edges("detect_stall", route_after_detect)
     g.add_conditional_edges("check_local", route_after_local)
     g.add_edge("check_sister", "check_vendor")
     g.add_edge("check_vendor", "rank_options")
-    g.add_edge("rank_options", END)
+    g.add_conditional_edges("rank_options", route_after_rank)
+
+    # ReAct loop: agent -> (tool call hai?) -> tools -> agent -> ... -> finalize_plan
+    g.add_edge("prepare_resequence", "resequence_agent")
+    g.add_conditional_edges("resequence_agent", tools_condition, {"tools": "tools", END: "finalize_plan"})
+    g.add_edge("tools", "resequence_agent")
+    g.add_edge("finalize_plan", END)
 
     return g.compile()
