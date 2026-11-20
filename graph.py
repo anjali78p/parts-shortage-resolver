@@ -5,6 +5,7 @@ from typing import Annotated, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from data import repair_orders
+from ranking import make_rank_options
 from tools import check_local_inventory, check_sister_stores, check_vendor_stock
 
 
@@ -16,6 +17,9 @@ class StallState(TypedDict):
     local_qty: int
     sister_options: list[dict]
     vendor_options: list[dict]
+    promise_by_hours: float
+    ranked_options: list[dict]
+    summary: str
     # Annotated + operator.add = "reducer": nodes ki list append hoti hai, overwrite nahi.
     log: Annotated[list[str], operator.add]
 
@@ -26,7 +30,8 @@ def detect_stall(state: StallState) -> dict:
     stalled = ro["status"] == "Waiting on Part"
     msg = (f"{state['ro_id']} ({ro['vehicle']} - {ro['job']}) STALLED, part {ro['part_no']} chahiye"
            if stalled else f"{state['ro_id']} stalled nahi hai")
-    return {"part_no": ro["part_no"], "is_stalled": stalled, "log": [msg]}
+    return {"part_no": ro["part_no"], "is_stalled": stalled,
+            "promise_by_hours": ro.get("promise_by_hours", 24), "log": [msg]}
 
 
 def check_local(state: StallState) -> dict:
@@ -57,18 +62,20 @@ def route_after_local(state: StallState) -> str:
 
 
 # 4) GRAPH BUILD
-def build_graph():
+def build_graph(llm):
     g = StateGraph(StallState)
 
     g.add_node("detect_stall", detect_stall)
     g.add_node("check_local", check_local)
     g.add_node("check_sister", check_sister)
     g.add_node("check_vendor", check_vendor)
+    g.add_node("rank_options", make_rank_options(llm))
 
     g.add_edge(START, "detect_stall")
     g.add_conditional_edges("detect_stall", route_after_detect)
     g.add_conditional_edges("check_local", route_after_local)
     g.add_edge("check_sister", "check_vendor")
-    g.add_edge("check_vendor", END)  # Step 2 mein yahan rank_options aayega
+    g.add_edge("check_vendor", "rank_options")
+    g.add_edge("rank_options", END)
 
     return g.compile()

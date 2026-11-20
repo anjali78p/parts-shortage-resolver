@@ -5,7 +5,7 @@ LOCAL_STORE = "A"
 repair_orders = {
     "RO-1042": {"vehicle": "Honda City", "job": "Brake job", "part_no": "BP-221",
                 "bay": 3, "tech": "T-07", "start": "10:00", "duration_hrs": 2,
-                "status": "Waiting on Part"},
+                "status": "Waiting on Part", "promise_by_hours": 8},
     "RO-1055": {"vehicle": "Hyundai i20", "job": "Oil service", "part_no": "OIL-10",
                 "bay": 1, "tech": "T-02", "start": "14:00", "duration_hrs": 1,
                 "status": "Scheduled"},
@@ -25,11 +25,14 @@ inventory = {
 }
 
 stores = {
-    "B": {"name": "Store B - Malviya Nagar", "distance_km": 12, "transfer_hours": 3},
-    "C": {"name": "Store C - Vaishali Nagar", "distance_km": 8, "transfer_hours": 2},
+    "B": {"name": "Store B - Malviya Nagar", "distance_km": 12, "transfer_hours": 3, "transfer_cost": 400},
+    "C": {"name": "Store C - Vaishali Nagar", "distance_km": 8, "transfer_hours": 2, "transfer_cost": 250},
 }
 
 vendors = [
     {"vendor": "AutoParts Direct", "part_no": "BP-221", "price": 1850, "eta_hours": 24, "qty": 20},
     {"vendor": "QuickSpares", "part_no": "BP-221", "price": 2100, "eta_hours": 6, "qty": 5},
 ]
+
+# Internal transfer price (store-to-store), vendor price se alag
+internal_part_price = {"BP-221": 1600, "OIL-10": 300, "WP-5": 150}

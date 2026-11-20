@@ -1,6 +1,6 @@
 """Plain Python functions. Abhi inhe nodes seedha call karenge.
 Step 3 mein inhe @tool bana ke LLM ko denge."""
-from data import LOCAL_STORE, inventory, stores, vendors
+from data import LOCAL_STORE, internal_part_price, inventory, stores, vendors
 
 
 def check_local_inventory(part_no: str) -> int:
@@ -14,7 +14,9 @@ def check_sister_stores(part_no: str) -> list[dict]:
             continue
         qty = stock.get(part_no, 0)
         if qty > 0:
-            found.append({"store_id": store_id, "qty": qty, **stores[store_id]})
+            total = internal_part_price.get(part_no, 0) + stores[store_id]["transfer_cost"]
+            found.append({"store_id": store_id, "qty": qty, "total_cost_inr": total,
+                          **stores[store_id]})
     return found
 
 

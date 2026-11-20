@@ -11,7 +11,7 @@ cp .env.example .env        # Step 4+ ke liye key daalo
 python main.py RO-1042
 Roadmap
 [x] Step 1: Graph without LLM (state, nodes, conditional edges)
-[ ] Step 2: LLM ranking node (structured output)
+[x] Step 2: LLM ranking node (structured output)
 [ ] Step 3: Tool calling + resequence
 [ ] Step 4: Human approval (interrupt) + checkpointer
 [ ] Step 5: Streamlit UI + demo scenarios
