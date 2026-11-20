@@ -8,11 +8,15 @@ python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env        # Step 4+ ke liye key daalo
-python main.py RO-1042
+python main.py RO-1042        # terminal version
+streamlit run app.py          # UI version
+
+Tests (bina API key): python test_graph_offline.py aur python test_ui_offline.py
+
 Roadmap
 [x] Step 1: Graph without LLM (state, nodes, conditional edges)
 [x] Step 2: LLM ranking node (structured output)
 [x] Step 3: Tool calling + resequence
 [x] Step 4: Human approval (interrupt) + checkpointer
-[ ] Step 5: Streamlit UI + demo scenarios
+[x] Step 5: Streamlit UI + demo scenarios
 

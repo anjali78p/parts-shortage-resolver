@@ -23,20 +23,24 @@ def human_approval(state: dict) -> dict:
     return {"approved": approved, "log": [msg + (f": {note}" if note else "")]}
 
 
-def apply_schedule(state: dict) -> dict:
-    """Sirf approve hone par chalta hai. Yahan real system mein ek API call hoti; hum mock data badalte hain."""
-    plan, best = state["plan"], state["ranked_options"][0]
-    changes = [f"Part order: {best['name']} se {best['eta_hours']}h mein aayega"]
-
+def apply_plan_to(ros: dict, plan: dict) -> list[str]:
+    """Plan ko kisi bhi RO-dict pe lagata hai. Asli data pe (apply_schedule) aur copy pe (UI preview) dono."""
+    changes = []
     for m in plan["moves"]:
-        ro = repair_orders[m["ro_id"]]
+        ro = ros[m["ro_id"]]
         ro["bay"], ro["tech"], ro["start"] = m["bay"], m["tech"], m["new_start"]
         changes.append(f"{m['ro_id']} -> bay {m['bay']}, {m['new_start']}-{m['new_end']}")
-
-    stalled = repair_orders[plan["stalled_ro"]]
+    stalled = ros[plan["stalled_ro"]]
     stalled["start"], stalled["status"] = plan["stalled_ro_resumes_at"], "Part Ordered"
     changes.append(f"{plan['stalled_ro']} -> {plan['stalled_ro_resumes_at']} pe resume, status 'Part Ordered'")
+    return changes
 
+
+def apply_schedule(state: dict) -> dict:
+    """Sirf approve hone par chalta hai. Real system mein yahan API call hoti; hum mock data badalte hain."""
+    plan, best = state["plan"], state["ranked_options"][0]
+    changes = [f"Part order: {best['name']} se {best['eta_hours']}h mein aayega"]
+    changes += apply_plan_to(repair_orders, plan)
     return {"applied_changes": changes, "log": ["Schedule update ho gaya"] + changes}
 
 
