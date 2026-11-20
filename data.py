@@ -46,3 +46,15 @@ vendors = [
 
 # Internal transfer price (store-to-store), vendor price se alag
 internal_part_price = {"BP-221": 1600, "OIL-10": 300, "WP-5": 150}
+
+
+# ---- Demo reset: apply_schedule repair_orders ko badalta hai, isliye original copy rakhte hain ----
+import copy
+
+_ORIGINAL_ROS = copy.deepcopy(repair_orders)
+
+
+def reset_demo_data() -> None:
+    # In-place update: baaki modules ne `from data import repair_orders` kiya hai, wahi dict object chahiye
+    repair_orders.clear()
+    repair_orders.update(copy.deepcopy(_ORIGINAL_ROS))

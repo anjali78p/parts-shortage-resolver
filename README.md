@@ -12,6 +12,7 @@ python main.py RO-1042
 Roadmap
 [x] Step 1: Graph without LLM (state, nodes, conditional edges)
 [x] Step 2: LLM ranking node (structured output)
-[ ] Step 3: Tool calling + resequence
-[ ] Step 4: Human approval (interrupt) + checkpointer
+[x] Step 3: Tool calling + resequence
+[x] Step 4: Human approval (interrupt) + checkpointer
 [ ] Step 5: Streamlit UI + demo scenarios
+

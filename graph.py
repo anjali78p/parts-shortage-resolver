@@ -2,10 +2,12 @@
 import operator
 from typing import Annotated, TypedDict
 
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import tools_condition
 
+from approval import apply_schedule, human_approval, route_after_approval, route_after_plan
 from data import repair_orders
 from ranking import make_rank_options
 from resequence import (make_finalize_plan, make_resequence_agent, make_run_tools,
@@ -26,6 +28,9 @@ class StallState(TypedDict):
     # Step 3
     messages: Annotated[list, add_messages]   # LLM <-> tools ki baatcheet; add_messages = special reducer
     plan: dict
+    # Step 4
+    approved: bool
+    applied_changes: list[str]
     log: Annotated[list[str], operator.add]
 
 
@@ -65,7 +70,7 @@ def route_after_rank(state: StallState) -> str:
     return "prepare_resequence" if state.get("ranked_options") else END
 
 
-def build_graph(llm):
+def build_graph(llm, checkpointer=None):
     g = StateGraph(StallState)
 
     g.add_node("detect_stall", detect_stall)
@@ -77,6 +82,8 @@ def build_graph(llm):
     g.add_node("resequence_agent", make_resequence_agent(llm))
     g.add_node("tools", make_run_tools())
     g.add_node("finalize_plan", make_finalize_plan(llm))
+    g.add_node("human_approval", human_approval)
+    g.add_node("apply_schedule", apply_schedule)
 
     g.add_edge(START, "detect_stall")
     g.add_conditional_edges("detect_stall", route_after_detect)
@@ -89,6 +96,11 @@ def build_graph(llm):
     g.add_edge("prepare_resequence", "resequence_agent")
     g.add_conditional_edges("resequence_agent", tools_condition, {"tools": "tools", END: "finalize_plan"})
     g.add_edge("tools", "resequence_agent")
-    g.add_edge("finalize_plan", END)
+    g.add_conditional_edges("finalize_plan", route_after_plan, {"human_approval": "human_approval", END: END})
 
-    return g.compile()
+    # Step 4: manager approve kare tabhi apply_schedule
+    g.add_conditional_edges("human_approval", route_after_approval, {"apply_schedule": "apply_schedule", END: END})
+    g.add_edge("apply_schedule", END)
+
+    # interrupt() ke liye checkpointer zaroori hai (paused state yahin save hoti hai)
+    return g.compile(checkpointer=checkpointer or MemorySaver())
