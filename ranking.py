@@ -70,23 +70,23 @@ def verify_ranking(result: RankingResult, facts: list[dict]) -> tuple[list[dict]
     for o in result.ranked:
         f = truth.get(o.name)
         if f is None:
-            notes.append(f"LLM ne nakli option '{o.name}' banaya, hata diya")
+            notes.append(f"The LLM invented an option '{o.name}', removed")
             continue
         d = o.model_dump()
         for k in ("eta_hours", "total_cost_inr", "meets_promise", "source"):
             if d[k] != f[k]:
-                notes.append(f"{o.name}: LLM ka {k} galat tha ({d[k]} -> {f[k]}), theek kiya")
+                notes.append(f"{o.name}: the LLM gave a wrong {k} ({d[k]} -> {f[k]}), corrected")
                 d[k] = f[k]
         cleaned.append(d)
     missing = set(truth) - {c["name"] for c in cleaned}
     if missing:
-        notes.append(f"LLM ne ye options chhod diye: {sorted(missing)}")
+        notes.append(f"The LLM left out these options: {sorted(missing)}")
     for i, c in enumerate(cleaned, 1):
         c["rank"] = i
     expected = rule_based_order(facts)
     got = [c["name"] for c in cleaned]
     if got != expected:
-        notes.append(f"CHECK: LLM order {got} rule order {expected} se alag hai (manager dekhe)")
+        notes.append(f"CHECK: LLM order {got} differs from the rule-based order {expected} (manager should review)")
     return cleaned, notes
 
 
@@ -97,8 +97,8 @@ def make_rank_options(llm):
     def rank_options(state: dict) -> dict:
         facts = normalize_options(state)
         if not facts:
-            return {"ranked_options": [], "summary": "Koi option nahi mila. Manager ko escalate karo.",
-                    "log": ["Rank: koi option nahi, escalate"]}
+            return {"ranked_options": [], "summary": "No part options found. Escalate to the service manager.",
+                    "log": ["Ranking: no options found, escalate"]}
 
         user_msg = (f"Part: {state['part_no']}\n"
                     f"Customer promise deadline: {state['promise_by_hours']} hours from now\n"
@@ -106,7 +106,7 @@ def make_rank_options(llm):
         result = structured_llm.invoke([("system", SYSTEM_PROMPT), ("human", user_msg)])
 
         cleaned, notes = verify_ranking(result, facts)
-        log = [f"LLM ne {len(result.ranked)} options rank kiye"] + [f"Guardrail: {n}" for n in notes]
+        log = [f"LLM ranked {len(result.ranked)} option(s)"] + [f"Guardrail: {n}" for n in notes]
         return {"ranked_options": cleaned, "summary": result.summary, "log": log}
 
     return rank_options

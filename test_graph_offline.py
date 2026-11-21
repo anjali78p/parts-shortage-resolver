@@ -24,7 +24,7 @@ plan = out["plan"]
 ids = [m["ro_id"] for m in plan["moves"]]
 assert ids == ["RO-1070", "RO-1055"], ids
 assert plan["idle_hours_saved"] == 2.0 and plan["stalled_ro_resumes_at"] == "12:00"
-assert sum("Guardrail" in l for l in out["log"] if "hataya" in l) == 2
+assert sum("Guardrail" in l for l in out["log"] if "removed" in l) == 2
 
 # overlap guardrail alag se
 state = {"ro_id": "RO-1042", "ranked_options": [{"eta_hours": 3}]}

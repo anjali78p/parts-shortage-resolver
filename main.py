@@ -10,7 +10,7 @@ from ranking import get_llm
 
 load_dotenv()
 if not os.getenv("GOOGLE_API_KEY"):
-    sys.exit("GOOGLE_API_KEY nahi mili. .env file banao (.env.example dekho).")
+    sys.exit("GOOGLE_API_KEY not found. Create a .env file (see .env.example).")
 
 ro_id = next((a for a in sys.argv[1:] if a.startswith("RO-")), "RO-1042")
 auto = "--approve" if "--approve" in sys.argv else "--reject" if "--reject" in sys.argv else None
@@ -24,12 +24,12 @@ next_input = {"ro_id": ro_id, "log": []}
 def ask_manager(request: dict) -> dict:
     plan = request["plan"]
     print("\n" + "=" * 50)
-    print("MANAGER APPROVAL CHAHIYE")
+    print("MANAGER APPROVAL NEEDED")
     print("=" * 50)
     print("Part:", request["part_order"])
     for m in plan["moves"]:
         print(f"  {m['ro_id']} ({m['job']}): {m['original_start']} -> {m['new_start']}-{m['new_end']}, bay {m['bay']}")
-    print(f"Idle bacha: {plan['idle_hours_saved']}h of {plan['idle_hours_total']}h")
+    print(f"Idle time recovered: {plan['idle_hours_saved']}h of {plan['idle_hours_total']}h")
     if auto:
         print(f"(auto: {auto})")
         return {"approved": auto == "--approve"}
@@ -68,12 +68,12 @@ if plan:
     print(f"Bay {w['bay']} idle: {w['idle_start']} - {w['idle_end']} ({plan['idle_hours_total']}h)")
     for m in plan["moves"]:
         print(f"  {m['ro_id']}: {m['original_start']} -> {m['new_start']}-{m['new_end']} (bay {m['bay']})")
-    print(f"Idle time bacha: {plan['idle_hours_saved']}h | Summary: {plan['summary']}")
+    print(f"Idle time recovered: {plan['idle_hours_saved']}h | Summary: {plan['summary']}")
 
 print("\n=== RESULT ===")
 if final.get("applied_changes"):
-    print("APPROVED. Schedule update hua:")
+    print("APPROVED. Schedule updated:")
     for c in final["applied_changes"]:
         print("  -", c)
 elif plan and plan.get("moves"):
-    print("REJECTED. Schedule me koi badlav nahi hua.")
+    print("REJECTED. No changes were made to the schedule.")

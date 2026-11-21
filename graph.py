@@ -37,25 +37,25 @@ class StallState(TypedDict):
 def detect_stall(state: StallState) -> dict:
     ro = repair_orders[state["ro_id"]]
     stalled = ro["status"] == "Waiting on Part"
-    msg = (f"{state['ro_id']} ({ro['vehicle']} - {ro['job']}) STALLED, part {ro['part_no']} chahiye"
-           if stalled else f"{state['ro_id']} stalled nahi hai")
+    msg = (f"{state['ro_id']} ({ro['vehicle']} - {ro['job']}) is stalled, waiting for part {ro['part_no']}"
+           if stalled else f"{state['ro_id']} is not waiting on a part")
     return {"part_no": ro["part_no"], "is_stalled": stalled,
             "promise_by_hours": ro.get("promise_by_hours", 24), "log": [msg]}
 
 
 def check_local(state: StallState) -> dict:
     qty = check_local_inventory(state["part_no"])
-    return {"local_qty": qty, "log": [f"Local stock: {qty} -> " + ("mil gaya" if qty > 0 else "nahi hai")]}
+    return {"local_qty": qty, "log": [f"Local stock: {qty} -> " + ("part available" if qty > 0 else "none on the shelf")]}
 
 
 def check_sister(state: StallState) -> dict:
     options = check_sister_stores(state["part_no"])
-    return {"sister_options": options, "log": [f"Sister stores: {len(options)} option(s) mile"]}
+    return {"sister_options": options, "log": [f"Sister stores: {len(options)} option(s) found"]}
 
 
 def check_vendor(state: StallState) -> dict:
     options = check_vendor_stock(state["part_no"])
-    return {"vendor_options": options, "log": [f"Vendors: {len(options)} option(s) mile"]}
+    return {"vendor_options": options, "log": [f"Vendors: {len(options)} option(s) found"]}
 
 
 def route_after_detect(state: StallState) -> str:

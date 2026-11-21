@@ -34,9 +34,9 @@ def candidate_ros(idle_start: str, idle_end: str) -> dict:
         if ro["status"] != "Scheduled" or to_hours(ro["start"]) < to_hours(idle_start):
             continue
         if check_local_inventory(ro["part_no"]) <= 0:
-            excluded.append({"ro_id": ro_id, "reason": f"part {ro['part_no']} local stock mein nahi"})
+            excluded.append({"ro_id": ro_id, "reason": f"part {ro['part_no']} not in local stock"})
         elif ro["duration_hrs"] > window:
-            excluded.append({"ro_id": ro_id, "reason": f"{ro['duration_hrs']}h job, window sirf {window}h"})
+            excluded.append({"ro_id": ro_id, "reason": f"{ro['duration_hrs']}h job does not fit the {window}h window"})
         else:
             candidates.append({"ro_id": ro_id, "vehicle": ro["vehicle"], "job": ro["job"],
                                "job_type": ro["job_type"], "duration_hrs": ro["duration_hrs"],

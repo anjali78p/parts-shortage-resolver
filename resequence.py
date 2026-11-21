@@ -37,7 +37,7 @@ def prepare_resequence(state: dict) -> dict:
     task = (f"Stalled RO: {state['ro_id']}. Best part option: {best['name']}, arriving in "
             f"{best['eta_hours']} hours from now (current time {NOW}). Plan how to use the idle bay time.")
     return {"messages": [SystemMessage(SYSTEM_PROMPT), HumanMessage(task)],
-            "log": [f"Resequence shuru: part {best['eta_hours']}h mein aayega ({best['name']})"]}
+            "log": [f"Re-planning started: part arrives in {best['eta_hours']}h ({best['name']})"]}
 
 
 # ---------- NODE 2: LLM (tools ke saath). Tool call kare ya final jawab de ----------
@@ -47,7 +47,7 @@ def make_resequence_agent(llm):
     def resequence_agent(state: dict) -> dict:
         response = llm_with_tools.invoke(state["messages"])
         calls = [f"Agent tool call: {c['name']}({c['args']})" for c in response.tool_calls]
-        return {"messages": [response], "log": calls or ["Agent ne research poori ki"]}
+        return {"messages": [response], "log": calls or ["Agent finished its research"]}
 
     return resequence_agent
 
@@ -76,22 +76,22 @@ def verify_plan(result: ResequencePlan, state: dict) -> tuple[dict, list[str]]:
     for m in result.moves:
         c = valid.get(m.ro_id)
         if c is None:
-            notes.append(f"{m.ro_id}: valid candidate nahi hai, hataya")
+            notes.append(f"{m.ro_id}: not a valid candidate, removed")
             continue
         if not tech_qualified(window["tech"], c["job_type"]):
-            notes.append(f"{m.ro_id}: tech {window['tech']} {c['job_type']} ke liye qualified nahi, hataya")
+            notes.append(f"{m.ro_id}: technician {window['tech']} is not qualified for {c['job_type']}, removed")
             continue
         try:
             start = to_hours(m.new_start)
         except ValueError:
-            notes.append(f"{m.ro_id}: time '{m.new_start}' samajh nahi aaya, hataya")
+            notes.append(f"{m.ro_id}: could not read time '{m.new_start}', removed")
             continue
         end = start + c["duration_hrs"]
         if start < w_start or end > w_end:
-            notes.append(f"{m.ro_id}: idle window ke bahar ({m.new_start}), hataya")
+            notes.append(f"{m.ro_id}: outside the idle window ({m.new_start}), removed")
             continue
         if any(start < a["_end"] and end > a["_start"] for a in accepted):
-            notes.append(f"{m.ro_id}: doosre move se overlap, hataya")
+            notes.append(f"{m.ro_id}: overlaps another move, removed")
             continue
         accepted.append({"ro_id": m.ro_id, "vehicle": c["vehicle"], "job": c["job"],
                          "bay": window["bay"], "tech": window["tech"],
@@ -115,7 +115,7 @@ def make_finalize_plan(llm):
         result = structured.invoke(state["messages"] + [HumanMessage(
             "Now give the final plan. Include only moves that passed all tool checks.")])
         plan, notes = verify_plan(result, state)
-        log = [f"Plan: {len(plan['moves'])} job(s) move honge, {plan['idle_hours_saved']}h idle bachega"]
+        log = [f"Plan: {len(plan['moves'])} job(s) moved, {plan['idle_hours_saved']}h of idle time recovered"]
         log += [f"Guardrail: {n}" for n in notes]
         return {"plan": plan, "log": log}
 

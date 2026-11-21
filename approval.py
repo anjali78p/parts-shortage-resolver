@@ -12,14 +12,14 @@ def human_approval(state: dict) -> dict:
     # Resume par yahi call manager ka jawab return karti hai.
     # DHYAN: resume par ye POORA node dobara chalta hai, isliye interrupt se pehle koi side-effect mat rakho.
     decision = interrupt({
-        "question": "Kya ye schedule change approve karna hai?",
-        "part_order": f"{best['name']} se part mangwana ({best['eta_hours']}h, Rs {best['total_cost_inr']})",
+        "question": "Approve this schedule change?",
+        "part_order": f"{best['name']}, arrives in {best['eta_hours']}h, Rs {best['total_cost_inr']}",
         "plan": plan,
     })
 
     approved = bool(decision.get("approved"))
     note = decision.get("note", "")
-    msg = "Manager ne APPROVE kiya" if approved else "Manager ne REJECT kiya"
+    msg = "Manager APPROVED" if approved else "Manager REJECTED"
     return {"approved": approved, "log": [msg + (f": {note}" if note else "")]}
 
 
@@ -32,16 +32,16 @@ def apply_plan_to(ros: dict, plan: dict) -> list[str]:
         changes.append(f"{m['ro_id']} -> bay {m['bay']}, {m['new_start']}-{m['new_end']}")
     stalled = ros[plan["stalled_ro"]]
     stalled["start"], stalled["status"] = plan["stalled_ro_resumes_at"], "Part Ordered"
-    changes.append(f"{plan['stalled_ro']} -> {plan['stalled_ro_resumes_at']} pe resume, status 'Part Ordered'")
+    changes.append(f"{plan['stalled_ro']} -> resumes at {plan['stalled_ro_resumes_at']}, status 'Part Ordered'")
     return changes
 
 
 def apply_schedule(state: dict) -> dict:
     """Sirf approve hone par chalta hai. Real system mein yahan API call hoti; hum mock data badalte hain."""
     plan, best = state["plan"], state["ranked_options"][0]
-    changes = [f"Part order: {best['name']} se {best['eta_hours']}h mein aayega"]
+    changes = [f"Part order: {best['name']}, arrives in {best['eta_hours']}h"]
     changes += apply_plan_to(repair_orders, plan)
-    return {"applied_changes": changes, "log": ["Schedule update ho gaya"] + changes}
+    return {"applied_changes": changes, "log": ["Schedule updated"] + changes}
 
 
 def route_after_plan(state: dict) -> str:
