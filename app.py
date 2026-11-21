@@ -32,7 +32,8 @@ ss = st.session_state
 
 
 # ---------------- bay board ----------------
-def render_board(ros: dict, moved: frozenset = frozenset()) -> str:
+def render_board(ros: dict, moved: frozenset = frozenset(), focus_ro: str | None = None) -> str:
+    """focus_ro: sirf wahi RO laal 'STALLED' dikhega jo agent abhi handle kar raha hai."""
     colors = {"stalled": ("#f8d7da", "#842029"), "moved": ("#d1e7dd", "#0f5132"),
               "ordered": ("#fff3cd", "#664d03"), "scheduled": ("#cfe2ff", "#084298")}
     th = "".join(f"<th style='font-size:11px;padding:2px'>{h:02d}:00</th>" for h in range(START_H, END_H))
@@ -48,8 +49,10 @@ def render_board(ros: dict, moved: frozenset = frozenset()) -> str:
                 cells.append(f"<td colspan='{round(start - cursor)}' style='border:1px solid rgba(128,128,128,.25)'></td>")
             if rid in moved:
                 kind, tag = "moved", "MOVED HERE"
-            elif r["status"] == "Waiting on Part":
+            elif r["status"] == "Waiting on Part" and (focus_ro is None or rid == focus_ro):
                 kind, tag = "stalled", "STALLED, bay idle"
+            elif r["status"] == "Waiting on Part":
+                kind, tag = "scheduled", "(waiting)"
             elif r["status"] == "Part Ordered":
                 kind, tag = "ordered", "part ordered"
             else:
@@ -137,16 +140,16 @@ moved = frozenset(m["ro_id"] for m in plan.get("moves", []))
 left, right = st.columns(2)
 with left:
     st.markdown("**Pehle (agent se pehle)**")
-    st.markdown(render_board(ss.before), unsafe_allow_html=True)
+    st.markdown(render_board(ss.before, focus_ro=ss.ro_id), unsafe_allow_html=True)
 with right:
     if ss.status == "awaiting" and plan.get("moves"):
         preview = copy.deepcopy(ss.before)
         apply_plan_to(preview, plan)
         st.markdown("**Proposed (approve hone par)**")
-        st.markdown(render_board(preview, moved), unsafe_allow_html=True)
+        st.markdown(render_board(preview, moved, ss.ro_id), unsafe_allow_html=True)
     elif final.get("approved"):
         st.markdown("**Baad mein (approved)**")
-        st.markdown(render_board(repair_orders, moved), unsafe_allow_html=True)
+        st.markdown(render_board(repair_orders, moved, ss.ro_id), unsafe_allow_html=True)
     else:
         st.markdown("**Baad mein**")
         st.caption("Koi schedule change nahi hua.")
