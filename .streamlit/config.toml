@@ -1,6 +1,0 @@
-# Optional polish: makes radio buttons, focus rings etc. match the blue accent used in the UI.
-[theme]
-primaryColor = "#3b82f6"
-
-[client]
-toolbarMode = "minimal"
