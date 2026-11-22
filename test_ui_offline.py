@@ -25,7 +25,7 @@ def fresh(ro="RO-1042"):
 
 # 0) idle page: only the selected RO is highlighted as stalled
 at = fresh()
-assert "Ready when you are" in md(at)
+assert "Ready when you are" in md(at) and "How it works" in md(at)
 assert md(at).count('class="pr-blk stalled"') == 1, "only the selected RO should be drawn as stalled"
 
 # 1) approve flow

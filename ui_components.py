@@ -26,7 +26,7 @@ CSS = """
 .st-key-run button{background:#3b82f6!important;border-color:#3b82f6!important;color:#fff!important;font-weight:600}
 .st-key-approve button{background:#30a46c!important;border-color:#30a46c!important;color:#fff!important;font-weight:600}
 .st-key-reject button{background:transparent!important;border-color:rgba(229,72,77,.7)!important;color:#e5484d!important;font-weight:600}
-[data-testid="stAppDeployButton"],.stDeployButton{display:none!important}
+[data-testid="stAppDeployButton"],.stDeployButton,[data-testid="stDecoration"]{display:none!important}
 
 .pr-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .pr-title{font-size:2rem;font-weight:750;letter-spacing:-.02em;line-height:1.1}
@@ -94,6 +94,12 @@ CSS = """
 .pr-banner .ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.85rem;color:#fff;background:rgb(var(--c));flex:none}
 .pr-banner .ttl{display:block;font-weight:700;font-size:.98rem}
 .pr-banner small{display:block;opacity:.85;font-size:.84rem;margin-top:3px;line-height:1.5}
+.pr-how{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:4px 0 8px}
+@media (max-width:900px){.pr-how{grid-template-columns:1fr}}
+.pr-how>div{border:1px solid var(--pr-border);border-radius:14px;padding:14px 16px;background:var(--pr-soft)}
+.pr-how .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:750;font-size:.8rem;color:#fff;background:rgb(62,142,247);margin-bottom:8px}
+.pr-how b{display:block;font-size:.95rem;margin-bottom:3px}
+.pr-how p{margin:0;font-size:.82rem;opacity:.75;line-height:1.5}
 .pr-log{font-size:.8rem;padding:4px 0;border-bottom:1px dashed var(--pr-border)}
 .pr-log code{font-size:.72rem;margin-right:6px}
 """.replace("__N__", str(SPAN))
@@ -236,3 +242,14 @@ def banner_html(kind: str, title: str, text_html: str = "") -> str:
 
 def log_html(entries: list) -> str:
     return "".join(f'<div class="pr-log"><code>{esc(n)}</code>{esc(l)}</div>' for n, l in entries)
+
+
+def how_it_works_html() -> str:
+    steps = [("Detect and source", "Finds the stalled repair order, checks local stock, sister stores and vendors, "
+                                    "then ranks the options against the customer's promise."),
+             ("Re-plan the bay", "Pulls forward jobs whose parts are already in stock and whose technician is "
+                                 "qualified, so the bay does not sit idle."),
+             ("You approve", "Nothing changes until a manager approves. Every step the agent took is logged.")]
+    cards = "".join(f'<div><div class="n">{i}</div><b>{esc(t)}</b><p>{esc(d)}</p></div>'
+                    for i, (t, d) in enumerate(steps, 1))
+    return f'<div class="pr-sec" style="margin-top:6px">How it works</div><div class="pr-how">{cards}</div>'

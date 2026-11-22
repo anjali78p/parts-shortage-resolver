@@ -12,12 +12,20 @@ from data import NOW, repair_orders, reset_demo_data
 from graph import build_graph
 from ranking import get_llm
 from ui_components import (AMBER, BLUE, CSS, GREEN, RED, banner_html, board_html, decision_html, esc,
-                           header_html, inr, kpi_html, legend_html, log_html, options_html, pill_html,
-                           pipeline_html)
+                           header_html, how_it_works_html, inr, kpi_html, legend_html, log_html,
+                           options_html, pill_html, pipeline_html)
 
 load_dotenv()
 st.set_page_config(page_title="Parts Shortage Resolver", page_icon="🛠️", layout="wide")
 st.markdown(f"<style>{CSS}</style>", unsafe_allow_html=True)
+
+# On Streamlit Community Cloud the keys come from "Secrets", not from a .env file.
+try:
+    for _k in ("GOOGLE_API_KEY", "GEMINI_MODEL"):
+        if _k in st.secrets and not os.getenv(_k):
+            os.environ[_k] = str(st.secrets[_k])
+except Exception:
+    pass  # no secrets file (local run): .env is used instead
 
 SCENARIOS = {
     "RO-1042": ("RO-1042 · Honda City brake job",
@@ -104,6 +112,7 @@ if ss.status == "idle":
                 unsafe_allow_html=True)
     st.markdown(board_html("Today's bay schedule", f"Live view · demo clock {NOW}", repair_orders, NOW,
                            focus_ro=ro_choice) + legend_html(), unsafe_allow_html=True)
+    st.markdown(how_it_works_html(), unsafe_allow_html=True)
     st.stop()
 
 # ---------------- results ----------------
